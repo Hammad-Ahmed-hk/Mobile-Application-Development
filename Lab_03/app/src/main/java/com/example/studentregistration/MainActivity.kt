@@ -4,17 +4,51 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.studentregistration.ui.theme.StudentRegistrationTheme
+
+private val PROGRAMMES = listOf(
+    "Software Engineering Technology",
+    "Computer Science",
+    "Information Technology"
+)
+private val STUDY_MODES = listOf("On Campus", "Online")
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -30,32 +64,36 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun StudentRegistrationScreen() {
+    // rememberSaveable keeps what the user typed when the screen is rotated.
+    var fullName by rememberSaveable { mutableStateOf("") }
+    var rollNumber by rememberSaveable { mutableStateOf("") }
+    var email by rememberSaveable { mutableStateOf("") }
 
-    // 1. Text field states
-    var fullName by remember { mutableStateOf("") }
-    var rollNumber by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
+    var programme by rememberSaveable { mutableStateOf("") }
+    var programmeMenuOpen by rememberSaveable { mutableStateOf(false) }
+    var studyMode by rememberSaveable { mutableStateOf("") }
 
-    // 2. Dropdown and radio button states
-    var selectedProgramme by remember { mutableStateOf("") }
-    var expanded by remember { mutableStateOf(false) }
-    var studyMode by remember { mutableStateOf("") }
+    var mobileDevelopment by rememberSaveable { mutableStateOf(false) }
+    var webDevelopment by rememberSaveable { mutableStateOf(false) }
+    var softwareTesting by rememberSaveable { mutableStateOf(false) }
 
-    // 3. Checkbox states
-    var mobileDevelopment by remember { mutableStateOf(false) }
-    var webDevelopment by remember { mutableStateOf(false) }
-    var softwareTesting by remember { mutableStateOf(false) }
+    var receiveUpdates by rememberSaveable { mutableStateOf(false) }
+    var studyHours by rememberSaveable { mutableFloatStateOf(0f) }
 
-    // 4. Switch and slider states
-    var receiveUpdates by remember { mutableStateOf(false) }
-    var studyHours by remember { mutableStateOf(0f) }
+    var submitted by rememberSaveable { mutableStateOf(false) }
+    var registrationSuccess by rememberSaveable { mutableStateOf(false) }
 
-    // 5. Validation states
-    var submitted by remember { mutableStateOf(false) }
-    var registrationSuccess by remember { mutableStateOf(false) }
+    // Validation rules live in RegistrationValidator so they can be unit tested.
+    val errors = RegistrationValidator.validate(
+        RegistrationForm(fullName, rollNumber, email, programme, studyMode)
+    )
+
+    // Any edit after pressing Register hides the old success message.
+    fun edited() {
+        registrationSuccess = false
+    }
 
     Scaffold { innerPadding ->
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -63,16 +101,12 @@ fun StudentRegistrationScreen() {
                 .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
-
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-
-            // Heading
             Text(
                 text = "Student Registration Form",
                 style = MaterialTheme.typography.headlineSmall
             )
-
             Text(
                 text = "Please enter your registration details",
                 style = MaterialTheme.typography.bodyMedium
@@ -80,288 +114,125 @@ fun StudentRegistrationScreen() {
 
             HorizontalDivider()
 
-            // 6. Full Name
-            Text("Full Name")
-
-            OutlinedTextField(
+            FormTextField(
+                label = "Full Name",
+                hint = "Enter full name",
                 value = fullName,
-                onValueChange = {
-                    fullName = it
-                    registrationSuccess = false
-                },
-                label = { Text("Enter full name") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                onValueChange = { fullName = it; edited() },
+                error = errors.fullName.takeIf { submitted }
             )
 
-            if (submitted && fullName.trim().isEmpty()) {
-                Text(
-                    "Full name is required",
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
-
-            // 7. Roll Number
-            Text("Roll Number")
-
-            OutlinedTextField(
+            FormTextField(
+                label = "Roll Number",
+                hint = "Enter roll number",
                 value = rollNumber,
-                onValueChange = {
-                    rollNumber = it
-                    registrationSuccess = false
-                },
-                label = { Text("Enter roll number") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                onValueChange = { rollNumber = it; edited() },
+                error = errors.rollNumber.takeIf { submitted }
             )
 
-            if (submitted && rollNumber.trim().isEmpty()) {
-                Text(
-                    "Roll number is required",
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
-
-            // 8. Email
-            Text("Email Address")
-
-            OutlinedTextField(
+            FormTextField(
+                label = "Email Address",
+                hint = "Enter email address",
                 value = email,
-                onValueChange = {
-                    email = it
-                    registrationSuccess = false
-                },
-                label = { Text("Enter email address") },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Email
-                ),
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                onValueChange = { email = it; edited() },
+                error = errors.email.takeIf { submitted },
+                keyboardType = KeyboardType.Email
             )
 
-            if (submitted && email.trim().isEmpty()) {
-                Text(
-                    "Email is required",
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
-
-            // 9. Programme Dropdown
+            // Programme dropdown
             Text("Programme")
-
             Box(modifier = Modifier.fillMaxWidth()) {
-
                 OutlinedTextField(
-                    value = selectedProgramme.ifEmpty {
-                        "Select programme"
-                    },
+                    value = programme,
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("Select Programme") },
+                    placeholder = { Text("Select programme") },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable {
-                            expanded = true
-                        }
+                        .clickable { programmeMenuOpen = true }
                 )
-
                 DropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = {
-                        expanded = false
-                    }
+                    expanded = programmeMenuOpen,
+                    onDismissRequest = { programmeMenuOpen = false }
                 ) {
-
-                    listOf(
-                        "Software Engineering Technology",
-                        "Computer Science",
-                        "Information Technology"
-                    ).forEach { programme ->
-
+                    PROGRAMMES.forEach { option ->
                         DropdownMenuItem(
-                            text = { Text(programme) },
+                            text = { Text(option) },
                             onClick = {
-                                selectedProgramme = programme
-                                expanded = false
-                                registrationSuccess = false
+                                programme = option
+                                programmeMenuOpen = false
+                                edited()
                             }
                         )
                     }
                 }
             }
+            ErrorText(errors.programme.takeIf { submitted })
 
-            if (submitted && selectedProgramme.isEmpty()) {
-                Text(
-                    "Please select a programme",
-                    color = MaterialTheme.colorScheme.error
-                )
+            // Study mode (radio buttons)
+            Text(text = "Study Mode", style = MaterialTheme.typography.titleMedium)
+            STUDY_MODES.forEach { mode ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(
+                        selected = studyMode == mode,
+                        onClick = { studyMode = mode; edited() }
+                    )
+                    Text(
+                        text = mode,
+                        modifier = Modifier.clickable { studyMode = mode; edited() }
+                    )
+                }
+            }
+            ErrorText(errors.studyMode.takeIf { submitted })
+
+            // Areas of interest (checkboxes)
+            Text(text = "Areas of Interest", style = MaterialTheme.typography.titleMedium)
+            LabeledCheckbox("Mobile Development", mobileDevelopment) {
+                mobileDevelopment = it; edited()
+            }
+            LabeledCheckbox("Web Development", webDevelopment) {
+                webDevelopment = it; edited()
+            }
+            LabeledCheckbox("Software Testing", softwareTesting) {
+                softwareTesting = it; edited()
             }
 
-            // 10. Study Mode
-            Text(
-                text = "Study Mode",
-                style = MaterialTheme.typography.titleMedium
-            )
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                RadioButton(
-                    selected = studyMode == "On Campus",
-                    onClick = {
-                        studyMode = "On Campus"
-                        registrationSuccess = false
-                    }
-                )
-
-                Text(
-                    text = "On Campus",
-                    modifier = Modifier.clickable {
-                        studyMode = "On Campus"
-                        registrationSuccess = false
-                    }
-                )
-            }
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                RadioButton(
-                    selected = studyMode == "Online",
-                    onClick = {
-                        studyMode = "Online"
-                        registrationSuccess = false
-                    }
-                )
-
-                Text(
-                    text = "Online",
-                    modifier = Modifier.clickable {
-                        studyMode = "Online"
-                        registrationSuccess = false
-                    }
-                )
-            }
-
-            if (submitted && studyMode.isEmpty()) {
-                Text(
-                    "Please select a study mode",
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
-
-            // 11. Interests
-            Text(
-                text = "Areas of Interest",
-                style = MaterialTheme.typography.titleMedium
-            )
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(
-                    checked = mobileDevelopment,
-                    onCheckedChange = {
-                        mobileDevelopment = it
-                        registrationSuccess = false
-                    }
-                )
-
-                Text(
-                    "Mobile Development",
-                    modifier = Modifier.clickable {
-                        mobileDevelopment = !mobileDevelopment
-                        registrationSuccess = false
-                    }
-                )
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(
-                    checked = webDevelopment,
-                    onCheckedChange = {
-                        webDevelopment = it
-                        registrationSuccess = false
-                    }
-                )
-
-                Text(
-                    "Web Development",
-                    modifier = Modifier.clickable {
-                        webDevelopment = !webDevelopment
-                        registrationSuccess = false
-                    }
-                )
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(
-                    checked = softwareTesting,
-                    onCheckedChange = {
-                        softwareTesting = it
-                        registrationSuccess = false
-                    }
-                )
-
-                Text(
-                    "Software Testing",
-                    modifier = Modifier.clickable {
-                        softwareTesting = !softwareTesting
-                        registrationSuccess = false
-                    }
-                )
-            }
-
-            // 12. Course Updates Switch
+            // Course updates switch
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("Receive course updates")
-
                 Switch(
                     checked = receiveUpdates,
-                    onCheckedChange = {
-                        receiveUpdates = it
-                        registrationSuccess = false
-                    }
+                    onCheckedChange = { receiveUpdates = it; edited() }
                 )
             }
 
-            // 13. Weekly Study Hours Slider
+            // Weekly study hours slider
             Text(
                 text = "Weekly Study Hours: ${studyHours.toInt()}",
                 style = MaterialTheme.typography.titleMedium
             )
-
             Slider(
                 value = studyHours,
-                onValueChange = {
-                    studyHours = it
-                    registrationSuccess = false
-                },
+                onValueChange = { studyHours = it; edited() },
                 valueRange = 0f..20f,
                 steps = 19
             )
 
-            // 14. Register Button
             Button(
                 onClick = {
-
                     submitted = true
-
-                    registrationSuccess =
-                        fullName.trim().isNotEmpty() &&
-                                rollNumber.trim().isNotEmpty() &&
-                                email.trim().isNotEmpty() &&
-                                selectedProgramme.isNotEmpty() &&
-                                studyMode.isNotEmpty()
+                    registrationSuccess = !errors.hasErrors
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Register")
             }
 
-            // 15. Success Message
             if (registrationSuccess) {
                 Text(
                     text = "Registration form completed successfully",
@@ -370,25 +241,19 @@ fun StudentRegistrationScreen() {
                 )
             }
 
-            // 16. Reset Button
             OutlinedButton(
                 onClick = {
-
                     fullName = ""
                     rollNumber = ""
                     email = ""
-
-                    selectedProgramme = ""
-                    expanded = false
+                    programme = ""
+                    programmeMenuOpen = false
                     studyMode = ""
-
                     mobileDevelopment = false
                     webDevelopment = false
                     softwareTesting = false
-
                     receiveUpdates = false
                     studyHours = 0f
-
                     submitted = false
                     registrationSuccess = false
                 },
@@ -399,5 +264,57 @@ fun StudentRegistrationScreen() {
 
             Spacer(modifier = Modifier.height(16.dp))
         }
+    }
+}
+
+/** Heading, single-line text field and (optional) error message. */
+@Composable
+private fun FormTextField(
+    label: String,
+    hint: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    error: String?,
+    keyboardType: KeyboardType = KeyboardType.Text
+) {
+    Text(label)
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(hint) },
+        isError = error != null,
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true
+    )
+    ErrorText(error)
+}
+
+/** Shows a validation message in the theme's error colour; draws nothing for null. */
+@Composable
+private fun ErrorText(message: String?) {
+    if (message != null) {
+        Text(text = message, color = MaterialTheme.colorScheme.error)
+    }
+}
+
+/** A checkbox whose label is also clickable. */
+@Composable
+private fun LabeledCheckbox(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
+        Text(label, modifier = Modifier.clickable { onCheckedChange(!checked) })
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun StudentRegistrationScreenPreview() {
+    StudentRegistrationTheme {
+        StudentRegistrationScreen()
     }
 }
